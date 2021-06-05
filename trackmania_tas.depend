@@ -1,0 +1,10 @@
+# depslib dependency file v1.0
+1622896865 source:c:\users\vlad\desktop\probleme\trackmania_tas\main.cpp
+	<windows.h>
+	<iostream>
+	<fstream>
+	<cstring>
+	<cassert>
+	<typeinfo>
+	<unordered_map>
+

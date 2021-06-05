@@ -1,0 +1,3 @@
+pos_x 0x16C59B8C
+pos_y 0x16C59B90
+pos_z 0x16C59B94
