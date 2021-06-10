@@ -1,4 +1,6 @@
+#define _WIN32_WINNT 0x0500
 #include <windows.h>
+
 #include <iostream>
 #include <fstream>
 #include <cstring>
@@ -128,9 +130,25 @@ public:
 
     fin.close();
   }
+
+  void tap_key (char ch) {
+    SHORT key = VkKeyScan(ch);
+    UINT mapped_key = MapVirtualKey(LOBYTE(key), 0);
+
+    INPUT input = {0};
+    input.type = INPUT_KEYBOARD;
+    input.ki.dwFlags = KEYEVENTF_SCANCODE;
+    input.ki.wScan = mapped_key;
+
+    SendInput(1, &input, sizeof(input));
+    std::this_thread::sleep_for(std::chrono::milliseconds(10));
+
+    input.ki.dwFlags = (KEYEVENTF_SCANCODE | KEYEVENTF_KEYUP);
+    SendInput(1, &input, sizeof(input));
+  }
 };
 
-void move_car_by_ox (TM_CAR &tmc, PROCESS_T &proc) {
+void teleport_car_by_ox (TM_CAR &tmc, PROCESS_T &proc) {
   tmc.values["pos_x"] = proc.read_value_from_address<float>(tmc.value_addresses["pos_x"]);
 
   for (int i = 0; i < 30; i++) {
@@ -153,6 +171,18 @@ void get_pos_indefinitely(TM_CAR &tmc, PROCESS_T &proc) {
   }
 }
 
+void move_car_by_ox (TM_CAR &tmc, PROCESS_T &proc) {
+  tmc.values["pos_x"] = proc.read_value_from_address<float>(tmc.value_addresses["pos_x"]);
+  float target_x = tmc.values["pos_x"] + 30;
+  std::chrono::milliseconds timespan(1000);
+
+  std::this_thread::sleep_for(timespan * 5);
+  while (proc.read_value_from_address<float>(tmc.value_addresses["pos_x"]) < target_x) {
+    tmc.tap_key('i');
+    //std::cout << proc.read_value_from_address<float>(tmc.value_addresses["pos_x"]) << ' ' << target_x << '\n';
+  }
+}
+
 int main() {
   TM_CAR tmc;
   ///tmc.parse_input_file<float>("tm_values.txt", tmc.values);
@@ -161,8 +191,9 @@ int main() {
   PROCESS_T proc;
   proc.get_process_by_name("TrackMania United Forever");
 
-  //move_car_by_ox(tmc, proc);
-  get_pos_indefinitely(tmc, proc);
+  //teleport_car_by_ox(tmc, proc);
+  //get_pos_indefinitely(tmc, proc);
+  move_car_by_ox(tmc, proc);
 
   return 0;
 }
