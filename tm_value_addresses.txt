@@ -1,3 +1,4 @@
-pos_x 0x16C59B8C
-pos_y 0x16C59B90
-pos_z 0x16C59B94
+pos_x 0x012DA5F0
+pos_y 0x012DA5F4
+pos_z 0x012DA5F8
+timer 0x012DA618
