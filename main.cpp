@@ -9,8 +9,55 @@
 #include <unordered_map>
 #include <chrono>
 #include <thread>
+#include <tuple>
+#include <vector>
 
 #define DEBUG 0
+
+namespace TM_OTH {
+  struct point_of_interest {
+    std::tuple<float, float, float> pos;
+    int best_before_time;  /// measured in milliseconds (UINT ingame)
+    int score_upon_completion;
+    float meet_radius;
+    bool has_reached;
+  };
+
+  struct point_in_simulation {
+    point_in_simulation () {
+      run_after_this_time = 0;
+      is_up_pressed = is_dn_pressed = is_le_pressed = is_ri_pressed = false;
+    }
+    int run_after_this_time;
+    bool is_up_pressed, is_dn_pressed, is_le_pressed, is_ri_pressed;
+  };
+
+  float square (float a) {
+    return a * a;
+  }
+
+  float squared_distance (std::tuple<float, float, float> a, std::tuple<float, float, float> b) {
+    float ans = 0;
+
+    ans += square(std::get<0>(a) - std::get<0>(b));
+    ans += square(std::get<1>(a) - std::get<1>(b));
+    ans += square(std::get<2>(a) - std::get<2>(b));
+
+    return ans;
+  }
+
+  std::tuple<float, float, float> make_tuple_from_container (auto cont, std::vector<std::string> s) {
+    assert((int)s.size() == 3);
+
+    std::tuple<float, float, float> ans;
+
+    std::get<0>(ans) = cont[s[0]];
+    std::get<1>(ans) = cont[s[1]];
+    std::get<2>(ans) = cont[s[2]];
+
+    return ans;
+  }
+}
 
 class PROCESS_T {
 private:
@@ -102,6 +149,10 @@ public:
     pos_z 439
     ...
   **/
+
+  /// points of interest for the circuit.
+  std::vector<TM_OTH::point_of_interest> points_of_interest;
+
   template<typename T>
   void parse_input_file(std::string filename, std::unordered_map<std::string, T> &write_to) {
     write_to.clear();
@@ -131,6 +182,53 @@ public:
     fin.close();
   }
 
+  void update_from_memory (PROCESS_T &proc) {
+    values["pos_x"] = proc.read_value_from_address<float>(value_addresses["pos_x"]);
+    values["pos_y"] = proc.read_value_from_address<float>(value_addresses["pos_y"]);
+    values["pos_z"] = proc.read_value_from_address<float>(value_addresses["pos_z"]);
+    values["timer"] = proc.read_value_from_address<int>(value_addresses["timer"]);
+  }
+
+  /// returns true if at least one POI has been passed through since last time.
+  bool update_points_of_interest () {
+    std::tuple<float, float, float> now_pos = TM_OTH::make_tuple_from_container(values, {"pos_x", "pos_y", "pos_z"});
+
+    bool did_change = false;
+    for (TM_OTH::point_of_interest &poi: points_of_interest) {
+      if (poi.has_reached == false &&
+          TM_OTH::squared_distance(poi.pos, now_pos) < poi.meet_radius &&
+          values["timer"] < poi.best_before_time) {
+        poi.has_reached = true;
+        did_change = true;
+      }
+    }
+
+    if (DEBUG && did_change) {
+      for (TM_OTH::point_of_interest poi: points_of_interest)
+        std::cout << poi.has_reached << ' ';
+      std::cout << '\n' << std::flush;
+    }
+
+    return did_change;
+  }
+
+  double fitness_function () {
+    double score = 0;
+    for (TM_OTH::point_of_interest &poi: points_of_interest)
+      if (poi.has_reached)
+        score += poi.score_upon_completion;
+
+    return score;
+  }
+
+  void restart_race () {
+    for (TM_OTH::point_of_interest &poi: points_of_interest)
+      poi.has_reached = false;
+
+    tap_key('q');
+    std::this_thread::sleep_for(std::chrono::milliseconds(100));
+  }
+
   void tap_key (char ch) {
     SHORT key = VkKeyScan(ch);
     UINT mapped_key = MapVirtualKey(LOBYTE(key), 0);
@@ -146,6 +244,17 @@ public:
     input.ki.dwFlags = (KEYEVENTF_SCANCODE | KEYEVENTF_KEYUP);
     SendInput(1, &input, sizeof(input));
   }
+
+  void tap_keys (TM_OTH::point_in_simulation point) {
+    if (point.is_up_pressed)
+      tap_key('i');
+    if (point.is_dn_pressed)
+      tap_key('k');
+    if (point.is_le_pressed)
+      tap_key('j');
+    if (point.is_ri_pressed)
+      tap_key('l');
+  }
 };
 
 void teleport_car_by_ox (TM_CAR &tmc, PROCESS_T &proc) {
@@ -158,29 +267,108 @@ void teleport_car_by_ox (TM_CAR &tmc, PROCESS_T &proc) {
 }
 
 void get_pos_indefinitely(TM_CAR &tmc, PROCESS_T &proc) {
-  std::chrono::milliseconds timespan(1000);
-
   while (1) {
-    tmc.values["pos_x"] = proc.read_value_from_address<float>(tmc.value_addresses["pos_x"]);
-    tmc.values["pos_y"] = proc.read_value_from_address<float>(tmc.value_addresses["pos_y"]);
-    tmc.values["pos_z"] = proc.read_value_from_address<float>(tmc.value_addresses["pos_z"]);
+    tmc.update_from_memory(proc);
 
     std::cout << tmc.values["pos_x"] << ' ' << tmc.values["pos_y"] << ' ' << tmc.values["pos_z"] << '\n';
 
-    std::this_thread::sleep_for(timespan);
+    std::this_thread::sleep_for(std::chrono::milliseconds(1000));
   }
 }
 
 void move_car_by_ox (TM_CAR &tmc, PROCESS_T &proc) {
+  std::this_thread::sleep_for(std::chrono::milliseconds(5000));
+
+  tmc.restart_race();
+
   tmc.values["pos_x"] = proc.read_value_from_address<float>(tmc.value_addresses["pos_x"]);
   float target_x = tmc.values["pos_x"] + 30;
-  std::chrono::milliseconds timespan(1000);
 
-  std::this_thread::sleep_for(timespan * 5);
   while (proc.read_value_from_address<float>(tmc.value_addresses["pos_x"]) < target_x) {
     tmc.tap_key('i');
-    //std::cout << proc.read_value_from_address<float>(tmc.value_addresses["pos_x"]) << ' ' << target_x << '\n';
   }
+}
+
+void checkpoint_reach (TM_CAR &tmc, PROCESS_T &proc) {
+  std::this_thread::sleep_for(std::chrono::milliseconds(5000));
+  tmc.restart_race();
+
+  while (1) {
+    tmc.update_from_memory(proc);
+    tmc.update_points_of_interest();
+
+    std::this_thread::sleep_for(std::chrono::milliseconds(20));
+  }
+}
+
+/**
+  sim_points: runs through the provided points.
+  run_until: stop the simulation when timer goes over it.
+  returns the score of the simulation.
+**/
+double run_simulation (TM_CAR &tmc, PROCESS_T &proc,
+                     std::vector<TM_OTH::point_in_simulation> &sim_points, int run_until) {
+  tmc.restart_race();
+  tmc.update_from_memory(proc);
+
+  int current_index = 0;
+  while (current_index < (int)sim_points.size() && tmc.values["timer"] < run_until) {
+    while (current_index + 1 < (int)sim_points.size() &&
+           tmc.values["timer"] >= sim_points[current_index + 1].run_after_this_time)
+      current_index++;
+
+    /// now I have to work with sim_points[current_index]
+    tmc.update_points_of_interest();
+    tmc.tap_keys(sim_points[current_index]);
+
+    //std::this_thread::sleep_for(std::chrono::milliseconds(10));
+    tmc.update_from_memory(proc);
+  }
+
+  std::cout << "simulation score: " << tmc.fitness_function() << '\n';
+
+  return tmc.fitness_function();
+}
+
+void depth_first_search (TM_CAR &tmc, PROCESS_T &proc, std::vector<TM_OTH::point_in_simulation> &sim_points) {
+  if ((int)sim_points.size() > 4) {
+    run_simulation(tmc, proc, sim_points, 6000);
+    return;
+  }
+
+  int next_timestamp = 0;
+  if ((int)sim_points.size() > 0)
+    next_timestamp = 500 + sim_points.back().run_after_this_time;
+
+  sim_points.push_back(TM_OTH::point_in_simulation());
+  sim_points.back().run_after_this_time = next_timestamp;
+
+  sim_points.back().is_up_pressed = true;
+  depth_first_search(tmc, proc, sim_points);
+  sim_points.back().is_up_pressed = false;
+
+  sim_points.back().is_up_pressed = true;
+  sim_points.back().is_ri_pressed = true;
+  depth_first_search(tmc, proc, sim_points);
+  sim_points.back().is_up_pressed = false;
+  sim_points.back().is_ri_pressed = false;
+
+  sim_points.back().is_up_pressed = true;
+  sim_points.back().is_le_pressed = true;
+  depth_first_search(tmc, proc, sim_points);
+  sim_points.back().is_up_pressed = false;
+  sim_points.back().is_le_pressed = false;
+
+  /// TODO pune mai multe bobite pe circuit
+
+//  sim_points.back().is_ri_pressed = true;
+//  depth_first_search(tmc, proc, sim_points);
+//  sim_points.back().is_ri_pressed = false;
+
+  //depth_first_search(tmc, proc, sim_points);
+  /// ^ nu are sens sa nu faci nimic daca tot dai tap
+
+  sim_points.pop_back();
 }
 
 int main() {
@@ -188,12 +376,23 @@ int main() {
   ///tmc.parse_input_file<float>("tm_values.txt", tmc.values);
   tmc.parse_input_file<DWORD>("tm_value_addresses.txt", tmc.value_addresses);
 
+  /// TODO fa functie care parseaza points_of_interest
+  tmc.points_of_interest.push_back({std::make_tuple(321.650, 9.359, 507.773),  5000, 100, 2.0, false});
+  tmc.points_of_interest.push_back({std::make_tuple(323.160, 9.359, 579.627),  7500, 100, 2.0, false});
+  tmc.points_of_interest.push_back({std::make_tuple(251.292, 9.359, 607.919), 20000, 100, 5.0, false});
+
   PROCESS_T proc;
   proc.get_process_by_name("TrackMania United Forever");
 
   //teleport_car_by_ox(tmc, proc);
   //get_pos_indefinitely(tmc, proc);
-  move_car_by_ox(tmc, proc);
+  //move_car_by_ox(tmc, proc);
+  //checkpoint_reach(tmc, proc);
+
+  std::vector<TM_OTH::point_in_simulation> sim_points;
+
+  std::this_thread::sleep_for(std::chrono::milliseconds(5000));
+  depth_first_search(tmc, proc, sim_points);
 
   return 0;
 }
