@@ -15,6 +15,7 @@
 #define DEBUG 0
 
 namespace TM_OTH {
+
   struct point_of_interest {
     std::tuple<float, float, float> pos;
     int best_before_time;  /// measured in milliseconds (UINT ingame)
@@ -26,10 +27,10 @@ namespace TM_OTH {
   struct point_in_simulation {
     point_in_simulation () {
       run_after_this_time = 0;
-      is_up_pressed = is_dn_pressed = is_le_pressed = is_ri_pressed = false;
+      is_pressed["up"] = is_pressed["dn"] = is_pressed["le"] = is_pressed["ri"] = false;
     }
     int run_after_this_time;
-    bool is_up_pressed, is_dn_pressed, is_le_pressed, is_ri_pressed;
+    std::unordered_map<std::string, bool> is_pressed; /// accepts "up", "dn", "le", "ri"
   };
 
   float square (float a) {
@@ -132,8 +133,7 @@ private:
 public:
   /**
     the dictionaries accept:
-    vel_x, vel_y, vel_z;
-    pos_x, pos_y, pos_z
+    pos_x, pos_y, pos_z, timer, ckpts
   **/
   std::unordered_map<std::string, float> values;  /// values for accepted strings
   std::unordered_map<std::string, DWORD> value_addresses;  /// values for addreses of accepted strings
@@ -152,6 +152,18 @@ public:
 
   /// points of interest for the circuit.
   std::vector<TM_OTH::point_of_interest> points_of_interest;
+
+  /// the mapping for the keys for this car.
+  std::unordered_map<std::string, char> key_mapping;
+
+  void init_keymapping () {
+    key_mapping.clear();
+    key_mapping["up"] = 'i';
+    key_mapping["dn"] = 'k';
+    key_mapping["le"] = 'j';
+    key_mapping["ri"] = 'l';
+    key_mapping["reset"] = 'q';
+  }
 
   template<typename T>
   void parse_input_file(std::string filename, std::unordered_map<std::string, T> &write_to) {
@@ -187,6 +199,7 @@ public:
     values["pos_y"] = proc.read_value_from_address<float>(value_addresses["pos_y"]);
     values["pos_z"] = proc.read_value_from_address<float>(value_addresses["pos_z"]);
     values["timer"] = proc.read_value_from_address<int>(value_addresses["timer"]);
+    values["ckpts"] = proc.read_value_from_address<int>(value_addresses["ckpts"]);
   }
 
   /// returns true if at least one POI has been passed through since last time.
@@ -218,6 +231,8 @@ public:
       if (poi.has_reached)
         score += poi.score_upon_completion;
 
+    score += 100 * values["ckpts"];
+
     return score;
   }
 
@@ -225,18 +240,15 @@ public:
     for (TM_OTH::point_of_interest &poi: points_of_interest)
       poi.has_reached = false;
 
-    tap_key('q');
+    tap_key(key_mapping["reset"]);
     std::this_thread::sleep_for(std::chrono::milliseconds(100));
   }
 
   void tap_key (char ch) {
-    SHORT key = VkKeyScan(ch);
-    UINT mapped_key = MapVirtualKey(LOBYTE(key), 0);
-
     INPUT input = {0};
     input.type = INPUT_KEYBOARD;
     input.ki.dwFlags = KEYEVENTF_SCANCODE;
-    input.ki.wScan = mapped_key;
+    input.ki.wScan = MapVirtualKey(LOBYTE(VkKeyScan(ch)), 0);
 
     SendInput(1, &input, sizeof(input));
     std::this_thread::sleep_for(std::chrono::milliseconds(10));
@@ -245,15 +257,40 @@ public:
     SendInput(1, &input, sizeof(input));
   }
 
+  /// will tap simultaneously any combination of the up/dn/le/ri keys.
   void tap_keys (TM_OTH::point_in_simulation point) {
-    if (point.is_up_pressed)
-      tap_key('i');
-    if (point.is_dn_pressed)
-      tap_key('k');
-    if (point.is_le_pressed)
-      tap_key('j');
-    if (point.is_ri_pressed)
-      tap_key('l');
+    /// key_mapping is an unordered_map: key_mapping["up"] = 'i' etc
+    /// point.is_pressed is an unordered_map: is_pressed["up"] = T/F
+
+    int no_of_keys_pressed = 0;
+    for (std::pair<std::string, bool> x: point.is_pressed)
+      if (x.second)
+        no_of_keys_pressed++;
+
+    if (no_of_keys_pressed == 0)
+      return;
+
+    INPUT input[2 * no_of_keys_pressed] = {0};
+
+    int cnt = 0;
+    for (std::pair<std::string, bool> x: point.is_pressed)
+      if (x.second) {
+        input[cnt].type = INPUT_KEYBOARD;
+        input[cnt].ki.dwFlags = KEYEVENTF_SCANCODE;
+        input[cnt].ki.wScan = MapVirtualKey(LOBYTE(VkKeyScan(key_mapping[x.first])), 0);
+        cnt++;
+
+        input[cnt] = input[cnt - 1];
+        cnt++;
+      }
+
+    SendInput(2 * no_of_keys_pressed, input, sizeof(INPUT));
+    std::this_thread::sleep_for(std::chrono::milliseconds(10));
+
+    for (cnt = 1; cnt < 2 * no_of_keys_pressed; cnt += 2)
+      input[cnt].ki.dwFlags |= KEYEVENTF_KEYUP;
+
+    SendInput(2 * no_of_keys_pressed, input, sizeof(INPUT));
   }
 };
 
@@ -270,7 +307,11 @@ void get_pos_indefinitely(TM_CAR &tmc, PROCESS_T &proc) {
   while (1) {
     tmc.update_from_memory(proc);
 
-    std::cout << tmc.values["pos_x"] << ' ' << tmc.values["pos_y"] << ' ' << tmc.values["pos_z"] << '\n';
+    std::cout << tmc.values["pos_x"] << ' ';
+    std::cout << tmc.values["pos_y"] << ' ';
+    std::cout << tmc.values["pos_z"] << ' ';
+    std::cout << tmc.values["timer"] << ' ';
+    std::cout << tmc.values["ckpts"] << '\n';
 
     std::this_thread::sleep_for(std::chrono::milliseconds(1000));
   }
@@ -321,7 +362,6 @@ double run_simulation (TM_CAR &tmc, PROCESS_T &proc,
     tmc.update_points_of_interest();
     tmc.tap_keys(sim_points[current_index]);
 
-    //std::this_thread::sleep_for(std::chrono::milliseconds(10));
     tmc.update_from_memory(proc);
   }
 
@@ -343,27 +383,27 @@ void depth_first_search (TM_CAR &tmc, PROCESS_T &proc, std::vector<TM_OTH::point
   sim_points.push_back(TM_OTH::point_in_simulation());
   sim_points.back().run_after_this_time = next_timestamp;
 
-  sim_points.back().is_up_pressed = true;
+  sim_points.back().is_pressed["up"] = true;
   depth_first_search(tmc, proc, sim_points);
-  sim_points.back().is_up_pressed = false;
+  sim_points.back().is_pressed["up"] = false;
 
-  sim_points.back().is_up_pressed = true;
-  sim_points.back().is_ri_pressed = true;
+  sim_points.back().is_pressed["up"] = true;
+  sim_points.back().is_pressed["ri"] = true;
   depth_first_search(tmc, proc, sim_points);
-  sim_points.back().is_up_pressed = false;
-  sim_points.back().is_ri_pressed = false;
+  sim_points.back().is_pressed["up"] = false;
+  sim_points.back().is_pressed["ri"] = false;
 
-  sim_points.back().is_up_pressed = true;
-  sim_points.back().is_le_pressed = true;
+  sim_points.back().is_pressed["up"] = true;
+  sim_points.back().is_pressed["le"] = true;
   depth_first_search(tmc, proc, sim_points);
-  sim_points.back().is_up_pressed = false;
-  sim_points.back().is_le_pressed = false;
+  sim_points.back().is_pressed["up"] = false;
+  sim_points.back().is_pressed["le"] = false;
 
   /// TODO pune mai multe bobite pe circuit
 
-//  sim_points.back().is_ri_pressed = true;
+//  sim_points.back().is_pressed["ri"] = true;
 //  depth_first_search(tmc, proc, sim_points);
-//  sim_points.back().is_ri_pressed = false;
+//  sim_points.back().is_pressed["ri"] = false;
 
   //depth_first_search(tmc, proc, sim_points);
   /// ^ nu are sens sa nu faci nimic daca tot dai tap
@@ -376,6 +416,8 @@ int main() {
   ///tmc.parse_input_file<float>("tm_values.txt", tmc.values);
   tmc.parse_input_file<DWORD>("tm_value_addresses.txt", tmc.value_addresses);
 
+  tmc.init_keymapping();
+
   /// TODO fa functie care parseaza points_of_interest
   tmc.points_of_interest.push_back({std::make_tuple(321.650, 9.359, 507.773),  5000, 100, 2.0, false});
   tmc.points_of_interest.push_back({std::make_tuple(323.160, 9.359, 579.627),  7500, 100, 2.0, false});
@@ -385,7 +427,7 @@ int main() {
   proc.get_process_by_name("TrackMania United Forever");
 
   //teleport_car_by_ox(tmc, proc);
-  //get_pos_indefinitely(tmc, proc);
+//  get_pos_indefinitely(tmc, proc);
   //move_car_by_ox(tmc, proc);
   //checkpoint_reach(tmc, proc);
 
