@@ -1,0 +1,4 @@
+pos_x,pos_y,pos_z,best_before_time,score_upon_completion,meet_radius
+321.650 9.359 507.773 5000 100 2.0
+323.160 9.359 579.627 7500 100 2.0
+251.292 9.359 607.919 20000 100 5.0

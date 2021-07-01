@@ -33,6 +33,14 @@
 			<Add option="-fexceptions" />
 		</Compiler>
 		<Unit filename="main.cpp" />
+		<Unit filename="tmc_functions.cpp" />
+		<Unit filename="tmc_functions.h" />
+		<Unit filename="tmc_process.cpp" />
+		<Unit filename="tmc_process.h" />
+		<Unit filename="tmc_tmcar.cpp" />
+		<Unit filename="tmc_tmcar.h" />
+		<Unit filename="tmc_utility.cpp" />
+		<Unit filename="tmc_utility.h" />
 		<Extensions>
 			<code_completion />
 			<envvars />
