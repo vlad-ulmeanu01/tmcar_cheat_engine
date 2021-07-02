@@ -31,7 +31,7 @@ void get_pos_indefinitely(TM_CAR &tmc, PROCESS_T &proc) {
 void move_car_by_ox (TM_CAR &tmc, PROCESS_T &proc) {
   std::this_thread::sleep_for(std::chrono::milliseconds(5000));
 
-  tmc.restart_race();
+  tmc.restart_race(proc);
 
   tmc.values["pos_x"] = proc.read_value_from_address<float>(tmc.value_addresses["pos_x"]);
   float target_x = tmc.values["pos_x"] + 30;
@@ -43,7 +43,7 @@ void move_car_by_ox (TM_CAR &tmc, PROCESS_T &proc) {
 
 void checkpoint_reach (TM_CAR &tmc, PROCESS_T &proc) {
   std::this_thread::sleep_for(std::chrono::milliseconds(5000));
-  tmc.restart_race();
+  tmc.restart_race(proc);
 
   while (1) {
     tmc.update_from_memory(proc);
@@ -63,21 +63,25 @@ void test_race_restart_upon_ending (TM_CAR &tmc, PROCESS_T &proc) {
     std::this_thread::sleep_for(std::chrono::milliseconds(50));
   }
 
-  tmc.restart_finished_race();
+  tmc.restart_race(proc);
 }
 
 /**
   sim_points: runs through the provided points.
   run_until: stop the simulation when timer goes over it.
-  returns the score of the simulation.
+  returns the score of the simulation (first) and if the race crossed the finish line (second).
 **/
-double run_simulation (TM_CAR &tmc, PROCESS_T &proc,
-                       std::vector<TM_OTH::point_in_simulation> &sim_points, int run_until) {
-  tmc.restart_race();
+std::pair<double, bool>
+run_simulation(TM_CAR &tmc, PROCESS_T &proc,
+               std::vector<TM_OTH::point_in_simulation> &sim_points, int run_until) {
+  tmc.restart_race(proc);
   tmc.update_from_memory(proc);
 
   int current_index = 0;
-  while (current_index < (int)sim_points.size() && tmc.values["timer"] < run_until) {
+  while (current_index < (int)sim_points.size() &&
+         tmc.values["timer"] < run_until &&
+         tmc.values["ckpts"] < tmc.total_no_checkpoints)
+  {
     while (current_index + 1 < (int)sim_points.size() &&
            tmc.values["timer"] >= sim_points[current_index + 1].run_after_this_time)
       current_index++;
@@ -89,9 +93,73 @@ double run_simulation (TM_CAR &tmc, PROCESS_T &proc,
     tmc.update_from_memory(proc);
   }
 
-  std::cout << "simulation score: " << tmc.fitness_function() << '\n';
+  if (TM_OTH::unwanted_cmp<float>(tmc.values["ckpts"], tmc.total_no_checkpoints))
+    TM_OTH::store_simulation(sim_points);
 
-  return tmc.fitness_function();
+  double fit = tmc.fitness_function();
+  std::cout << "simulation score: " << fit << '\n';
+
+  return std::make_pair(fit, TM_OTH::unwanted_cmp<float>(tmc.values["ckpts"], tmc.total_no_checkpoints));
+}
+
+void breadth_first_search (TM_CAR &tmc, PROCESS_T &proc) {
+  std::this_thread::sleep_for(std::chrono::milliseconds(5000));
+  std::vector<TM_OTH::point_in_simulation> sim_points;
+
+//  std::set<std::pair<double, std::vector<TM_OTH::point_in_simulation>>,
+//           std::greater<std::pair<double, std::vector<TM_OTH::point_in_simulation>>>> ss;
+  std::set<std::pair<double, std::vector<TM_OTH::point_in_simulation>>, compare_bfs> ss;
+  ss.insert(make_pair(0.0, sim_points));
+
+  double fit;
+  bool did_end;
+  while (!ss.empty()) {
+    auto this_sim = *ss.begin();
+    ss.erase(ss.begin());
+
+    int write_at_time = (int)this_sim.second.size() * tmc.bfs_window_time_ms; ///when should I make the next move
+    int cutoff_time = write_at_time + tmc.bfs_add_time_ms; ///till when should I run this
+
+    this_sim.second.push_back(TM_OTH::point_in_simulation());
+    this_sim.second.back().run_after_this_time = write_at_time;
+
+    this_sim.second.back().is_pressed["up"] = true;
+    std::tie(fit, did_end) = run_simulation(tmc, proc, this_sim.second, cutoff_time);
+    if (!did_end) {
+      ss.insert(make_pair(fit, this_sim.second));
+    }
+    this_sim.second.back().is_pressed["up"] = false;
+
+
+
+    this_sim.second.back().is_pressed["up"] = true;
+    this_sim.second.back().is_pressed["ri"] = true;
+    std::tie(fit, did_end) = run_simulation(tmc, proc, this_sim.second, cutoff_time);
+    if (!did_end) {
+      ss.insert(make_pair(fit, this_sim.second));
+    }
+    this_sim.second.back().is_pressed["up"] = false;
+    this_sim.second.back().is_pressed["ri"] = false;
+
+
+
+    this_sim.second.back().is_pressed["up"] = true;
+    this_sim.second.back().is_pressed["le"] = true;
+    std::tie(fit, did_end) = run_simulation(tmc, proc, this_sim.second, cutoff_time);
+    if (!did_end) {
+      ss.insert(make_pair(fit, this_sim.second));
+    }
+    this_sim.second.back().is_pressed["up"] = false;
+    this_sim.second.back().is_pressed["le"] = false;
+
+    if ((int)ss.size() > tmc.ss_size_cutoff_point) {
+      while ((int)ss.size() > tmc.ss_size_cutoff_cut_to) {
+        auto it = ss.end();
+        it--;
+        ss.erase(it);
+      }
+    }
+  }
 }
 
 void depth_first_search (TM_CAR &tmc, PROCESS_T &proc, std::vector<TM_OTH::point_in_simulation> &sim_points) {
@@ -134,4 +202,3 @@ void depth_first_search (TM_CAR &tmc, PROCESS_T &proc, std::vector<TM_OTH::point
 
   sim_points.pop_back();
 }
-

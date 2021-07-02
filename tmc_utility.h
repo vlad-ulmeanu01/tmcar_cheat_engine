@@ -15,6 +15,8 @@
 #include <tuple>
 #include <vector>
 #include <sstream>
+#include <set>
+#include <cmath>
 
 #define DEBUG 0
 
@@ -45,6 +47,9 @@ namespace TM_OTH
   };
 
   float square (float a);
+
+  template<typename T>
+  bool unwanted_cmp (T a, T b);
 
   float squared_distance (std::tuple<float, float, float> a, std::tuple<float, float, float> b);
 

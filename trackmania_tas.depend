@@ -8,13 +8,13 @@
 	<typeinfo>
 	<unordered_map>
 
-1625228545 source:c:\users\mi notebook pro\documents\github\tmcar_cheat_engine\main.cpp
+1625248057 source:c:\users\mi notebook pro\documents\github\tmcar_cheat_engine\main.cpp
 	"tmc_utility.h"
 	"tmc_process.h"
 	"tmc_tmcar.h"
 	"tmc_functions.h"
 
-1625225143 c:\users\mi notebook pro\documents\github\tmcar_cheat_engine\tmc_utility.h
+1625249194 c:\users\mi notebook pro\documents\github\tmcar_cheat_engine\tmc_utility.h
 	<windows.h>
 	<iostream>
 	<fstream>
@@ -27,32 +27,34 @@
 	<tuple>
 	<vector>
 	<sstream>
+	<set>
+	<cmath>
 
 1625143066 c:\users\mi notebook pro\documents\github\tmcar_cheat_engine\tmc_process.h
 	"tmc_utility.h"
 
-1625228569 c:\users\mi notebook pro\documents\github\tmcar_cheat_engine\tmc_tmcar.h
+1625247859 c:\users\mi notebook pro\documents\github\tmcar_cheat_engine\tmc_tmcar.h
 	"tmc_utility.h"
 	"tmc_process.h"
 
-1625221058 c:\users\mi notebook pro\documents\github\tmcar_cheat_engine\tmc_functions.h
+1625249337 c:\users\mi notebook pro\documents\github\tmcar_cheat_engine\tmc_functions.h
 	"tmc_utility.h"
 	"tmc_process.h"
 	"tmc_tmcar.h"
 
-1625221045 source:c:\users\mi notebook pro\documents\github\tmcar_cheat_engine\tmc_functions.cpp
+1625248502 source:c:\users\mi notebook pro\documents\github\tmcar_cheat_engine\tmc_functions.cpp
 	"tmc_utility.h"
 	"tmc_process.h"
 	"tmc_tmcar.h"
 	"tmc_functions.h"
 
-1625225020 source:c:\users\mi notebook pro\documents\github\tmcar_cheat_engine\tmc_utility.cpp
+1625248667 source:c:\users\mi notebook pro\documents\github\tmcar_cheat_engine\tmc_utility.cpp
 	"tmc_utility.h"
 
 1625151647 source:c:\users\mi notebook pro\documents\github\tmcar_cheat_engine\tmc_process.cpp
 	"tmc_process.h"
 
-1625228835 source:c:\users\mi notebook pro\documents\github\tmcar_cheat_engine\tmc_tmcar.cpp
+1625248806 source:c:\users\mi notebook pro\documents\github\tmcar_cheat_engine\tmc_tmcar.cpp
 	"tmc_utility.h"
 	"tmc_process.h"
 	"tmc_tmcar.h"

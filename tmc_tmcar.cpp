@@ -113,27 +113,43 @@ void TM_CAR::parse_points_of_interest(std::string filename) {
 }
 
 void TM_CAR::parse_other_data (std::string filename) {
-    std::ifstream fin (filename);
-    assert(fin.is_open());
+  std::ifstream fin (filename);
+  assert(fin.is_open());
 
-    std::string line;
+  std::string line;
+
+  for (int cnt = 0; cnt < 5; cnt++) {
     std::getline(fin, line);
     int pos_space = line.find(" ");
     assert(pos_space != -1);
-
     std::string before_space = line.substr(0, pos_space),
                 after_space = line.substr(pos_space + 1, (int)line.size() - 1 - pos_space);
 
-    assert(before_space == "total_no_checkpoints");
-    total_no_checkpoints = atoi(after_space.c_str());
-
-    if (DEBUG) {
-      std::cout << "total_no_checkpoints = " << total_no_checkpoints << '\n';
-      std::cout << std::flush;
+    if (cnt == 0) {
+      assert(before_space == "total_no_checkpoints");
+      total_no_checkpoints = atoi(after_space.c_str());
+    } else if (cnt == 1) {
+      assert(before_space == "ss_size_cutoff_point");
+      ss_size_cutoff_point = atoi(after_space.c_str());
+    } else if (cnt == 2) {
+      assert(before_space == "ss_size_cutoff_cut_to");
+      ss_size_cutoff_cut_to = atoi(after_space.c_str());
+    } else if (cnt == 3) {
+      assert(before_space == "bfs_window_time_ms");
+      bfs_window_time_ms = atoi(after_space.c_str());
+    } else if (cnt == 4) {
+      assert(before_space == "bfs_add_time_ms");
+      bfs_add_time_ms = atoi(after_space.c_str());
     }
-
-    fin.close();
   }
+
+  if (DEBUG) {
+    std::cout << "total_no_checkpoints = " << total_no_checkpoints << '\n';
+    std::cout << std::flush;
+  }
+
+  fin.close();
+}
 
 void TM_CAR::update_from_memory (PROCESS_T &proc) {
   values["pos_x"] = proc.read_value_from_address<float>(value_addresses["pos_x"]);
@@ -176,27 +192,33 @@ double TM_CAR::fitness_function () {
       score += poi.score_upon_completion;
 
   score += 100 * values["ckpts"];
+  score += values["speed"] / 4;
+  score += values["distl"] / 5;
+//  if (values["timer"] > 0)
+//    score += 250000 / (values["timer"] + 1); /// incentivizes earlier runs
+
+  if (TM_OTH::unwanted_cmp<float>(values["ckpts"], total_no_checkpoints))
+    score *= 2;
 
   return score;
 }
 
-///restarts unfinished race.
-void TM_CAR::restart_race () {
+void TM_CAR::restart_race (PROCESS_T &proc) {
   for (TM_OTH::point_of_interest &poi: points_of_interest)
     poi.has_reached = false;
 
-  tap_key(key_mapping["reset"]);
-  std::this_thread::sleep_for(std::chrono::milliseconds(100));
-}
+  assert(values["ckpts"] <= total_no_checkpoints);
 
-void TM_CAR::restart_finished_race () {
-  if (values["ckpts"] != total_no_checkpoints)
-    return;
-
-  std::this_thread::sleep_for(std::chrono::milliseconds(100));
-  tap_key('\n');
-  std::this_thread::sleep_for(std::chrono::milliseconds(100));
-  tap_key('\n');
+  if (!TM_OTH::unwanted_cmp<float>(values["ckpts"], total_no_checkpoints)) {
+    tap_key(key_mapping["reset"]);
+    std::this_thread::sleep_for(std::chrono::milliseconds(100));
+  } else {
+    while (!TM_OTH::unwanted_cmp<float>(values["ckpts"], 0)) {
+      tap_key('\n');
+      std::this_thread::sleep_for(std::chrono::milliseconds(20));
+      update_from_memory(proc);
+    }
+  }
 }
 
 void TM_CAR::tap_key (char ch) {

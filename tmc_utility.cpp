@@ -6,6 +6,16 @@ namespace TM_OTH
     return a * a;
   }
 
+  template bool unwanted_cmp (float a, float b);
+  template bool unwanted_cmp (double a, double b);
+
+  template<typename T>
+  bool unwanted_cmp (T a, T b) {
+    if (fabs(a - b) < 0.00001)
+      return true;
+    return false;
+  }
+
   float squared_distance (std::tuple<float, float, float> a, std::tuple<float, float, float> b) {
     float ans = 0;
 
@@ -32,14 +42,14 @@ namespace TM_OTH
     return ans;
   }
 
-  void store_simulation (std::vector<point_in_simulation> &v) {
+  void store_simulation (std::vector<point_in_simulation> &sim_points) {
     std::ostringstream stringStream;
     stringStream << time(0);
     std::string filename = "run_" + stringStream.str() + ".txt";
 
     std::ofstream fout (filename);
 
-    for (point_in_simulation x: v) {
+    for (point_in_simulation x: sim_points) {
       fout << x.run_after_this_time << ' ';
       fout << x.is_pressed["up"];
       fout << x.is_pressed["dn"];

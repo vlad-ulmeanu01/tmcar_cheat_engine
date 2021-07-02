@@ -36,6 +36,14 @@ public:
   /// total number of checkpoints on map. used to verify if run has ended after finish.
   int total_no_checkpoints;
 
+  int ss_size_cutoff_point;
+
+  int ss_size_cutoff_cut_to;
+
+  int bfs_window_time_ms;
+
+  int bfs_add_time_ms;
+
 
   void init_keymapping ();
 
@@ -53,9 +61,7 @@ public:
 
   double fitness_function ();
 
-  void restart_race ();
-
-  void restart_finished_race ();
+  void restart_race (PROCESS_T &proc);
 
   void tap_key (char ch);
 
