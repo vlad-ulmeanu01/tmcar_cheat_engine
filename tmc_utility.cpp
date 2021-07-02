@@ -6,11 +6,11 @@ namespace TM_OTH
     return a * a;
   }
 
-  template bool unwanted_cmp (float a, float b);
-  template bool unwanted_cmp (double a, double b);
+  template bool rational_cmp (float a, float b);
+  template bool rational_cmp (double a, double b);
 
   template<typename T>
-  bool unwanted_cmp (T a, T b) {
+  bool rational_cmp (T a, T b) {
     if (fabs(a - b) < 0.00001)
       return true;
     return false;

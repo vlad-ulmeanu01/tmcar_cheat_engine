@@ -93,13 +93,13 @@ run_simulation(TM_CAR &tmc, PROCESS_T &proc,
     tmc.update_from_memory(proc);
   }
 
-  if (TM_OTH::unwanted_cmp<float>(tmc.values["ckpts"], tmc.total_no_checkpoints))
+  if (TM_OTH::rational_cmp<float>(tmc.values["ckpts"], tmc.total_no_checkpoints))
     TM_OTH::store_simulation(sim_points);
 
   double fit = tmc.fitness_function();
   std::cout << "simulation score: " << fit << '\n';
 
-  return std::make_pair(fit, TM_OTH::unwanted_cmp<float>(tmc.values["ckpts"], tmc.total_no_checkpoints));
+  return std::make_pair(fit, TM_OTH::rational_cmp<float>(tmc.values["ckpts"], tmc.total_no_checkpoints));
 }
 
 void breadth_first_search (TM_CAR &tmc, PROCESS_T &proc) {

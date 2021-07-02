@@ -7,8 +7,11 @@
 
 struct compare_bfs {
   bool operator () (const std::pair<double, std::vector<TM_OTH::point_in_simulation>> a,
-                   const std::pair<double, std::vector<TM_OTH::point_in_simulation>> b) {
-    if (!TM_OTH::unwanted_cmp<double>(a.first, b.first))
+                    const std::pair<double, std::vector<TM_OTH::point_in_simulation>> b) {
+    if (abs((int)a.second.size() - (int)b.second.size()) >= 3)
+      return (int)a.second.size() < (int)b.second.size();
+
+    if (!TM_OTH::rational_cmp<double>(a.first, b.first))
       return a.first > b.first;
 
     return (int)a.second.size() < (int)b.second.size();

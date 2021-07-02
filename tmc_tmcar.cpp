@@ -197,7 +197,7 @@ double TM_CAR::fitness_function () {
 //  if (values["timer"] > 0)
 //    score += 250000 / (values["timer"] + 1); /// incentivizes earlier runs
 
-  if (TM_OTH::unwanted_cmp<float>(values["ckpts"], total_no_checkpoints))
+  if (TM_OTH::rational_cmp<float>(values["ckpts"], total_no_checkpoints))
     score *= 2;
 
   return score;
@@ -209,11 +209,11 @@ void TM_CAR::restart_race (PROCESS_T &proc) {
 
   assert(values["ckpts"] <= total_no_checkpoints);
 
-  if (!TM_OTH::unwanted_cmp<float>(values["ckpts"], total_no_checkpoints)) {
+  if (!TM_OTH::rational_cmp<float>(values["ckpts"], total_no_checkpoints)) {
     tap_key(key_mapping["reset"]);
     std::this_thread::sleep_for(std::chrono::milliseconds(100));
   } else {
-    while (!TM_OTH::unwanted_cmp<float>(values["ckpts"], 0)) {
+    while (!TM_OTH::rational_cmp<float>(values["ckpts"], 0)) {
       tap_key('\n');
       std::this_thread::sleep_for(std::chrono::milliseconds(20));
       update_from_memory(proc);
