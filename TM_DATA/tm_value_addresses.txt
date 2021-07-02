@@ -3,5 +3,5 @@ pos_y 0x00EDA5F4
 pos_z 0x00EDA5F8
 timer 0x00EDA618
 ckpts 0x00EDA61C
-
-
+speed 0x00000001
+distl 0x00000002

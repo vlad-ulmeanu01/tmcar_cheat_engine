@@ -37,6 +37,7 @@ void TM_CAR::parse_input_file_to_umap(std::string filename, std::unordered_map<s
   write_to.clear();
 
   std::ifstream fin (filename);
+  assert(fin.is_open());
 
   std::string line;
   while (std::getline(fin, line)) {
@@ -111,12 +112,37 @@ void TM_CAR::parse_points_of_interest(std::string filename) {
   fin.close();
 }
 
+void TM_CAR::parse_other_data (std::string filename) {
+    std::ifstream fin (filename);
+    assert(fin.is_open());
+
+    std::string line;
+    std::getline(fin, line);
+    int pos_space = line.find(" ");
+    assert(pos_space != -1);
+
+    std::string before_space = line.substr(0, pos_space),
+                after_space = line.substr(pos_space + 1, (int)line.size() - 1 - pos_space);
+
+    assert(before_space == "total_no_checkpoints");
+    total_no_checkpoints = atoi(after_space.c_str());
+
+    if (DEBUG) {
+      std::cout << "total_no_checkpoints = " << total_no_checkpoints << '\n';
+      std::cout << std::flush;
+    }
+
+    fin.close();
+  }
+
 void TM_CAR::update_from_memory (PROCESS_T &proc) {
   values["pos_x"] = proc.read_value_from_address<float>(value_addresses["pos_x"]);
   values["pos_y"] = proc.read_value_from_address<float>(value_addresses["pos_y"]);
   values["pos_z"] = proc.read_value_from_address<float>(value_addresses["pos_z"]);
   values["timer"] = proc.read_value_from_address<int>(value_addresses["timer"]);
   values["ckpts"] = proc.read_value_from_address<int>(value_addresses["ckpts"]);
+  values["speed"] = proc.read_value_from_address<int>(value_addresses["speed"]);
+  values["distl"] = proc.read_value_from_address<int>(value_addresses["distl"]);
 }
 
 /// returns true if at least one POI has been passed through since last time.
@@ -154,12 +180,23 @@ double TM_CAR::fitness_function () {
   return score;
 }
 
+///restarts unfinished race.
 void TM_CAR::restart_race () {
   for (TM_OTH::point_of_interest &poi: points_of_interest)
     poi.has_reached = false;
 
   tap_key(key_mapping["reset"]);
   std::this_thread::sleep_for(std::chrono::milliseconds(100));
+}
+
+void TM_CAR::restart_finished_race () {
+  if (values["ckpts"] != total_no_checkpoints)
+    return;
+
+  std::this_thread::sleep_for(std::chrono::milliseconds(100));
+  tap_key('\n');
+  std::this_thread::sleep_for(std::chrono::milliseconds(100));
+  tap_key('\n');
 }
 
 void TM_CAR::tap_key (char ch) {

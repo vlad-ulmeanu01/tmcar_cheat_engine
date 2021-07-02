@@ -14,6 +14,7 @@
 #include <thread>
 #include <tuple>
 #include <vector>
+#include <sstream>
 
 #define DEBUG 0
 
@@ -49,6 +50,10 @@ namespace TM_OTH
 
   template<typename T>
   std::tuple<float, float, float> make_tuple_from_container (T cont, std::vector<std::string> s);
+
+  void store_simulation (std::vector<point_in_simulation> &v);
+
+  void get_simulation (std::string filename, std::vector<point_in_simulation> &v);
 }
 
 #endif

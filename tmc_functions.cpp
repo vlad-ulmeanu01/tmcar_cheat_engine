@@ -20,7 +20,9 @@ void get_pos_indefinitely(TM_CAR &tmc, PROCESS_T &proc) {
     std::cout << tmc.values["pos_y"] << ' ';
     std::cout << tmc.values["pos_z"] << ' ';
     std::cout << tmc.values["timer"] << ' ';
-    std::cout << tmc.values["ckpts"] << '\n';
+    std::cout << tmc.values["ckpts"] << ' ';
+    std::cout << tmc.values["speed"] << ' ';
+    std::cout << tmc.values["distl"] << '\n';
 
     std::this_thread::sleep_for(std::chrono::milliseconds(1000));
   }
@@ -51,13 +53,26 @@ void checkpoint_reach (TM_CAR &tmc, PROCESS_T &proc) {
   }
 }
 
+void test_race_restart_upon_ending (TM_CAR &tmc, PROCESS_T &proc) {
+  tmc.update_from_memory(proc);
+
+  while (tmc.values["ckpts"] < tmc.total_no_checkpoints) {
+    tmc.update_from_memory(proc);
+    tmc.update_points_of_interest();
+
+    std::this_thread::sleep_for(std::chrono::milliseconds(50));
+  }
+
+  tmc.restart_finished_race();
+}
+
 /**
   sim_points: runs through the provided points.
   run_until: stop the simulation when timer goes over it.
   returns the score of the simulation.
 **/
 double run_simulation (TM_CAR &tmc, PROCESS_T &proc,
-                     std::vector<TM_OTH::point_in_simulation> &sim_points, int run_until) {
+                       std::vector<TM_OTH::point_in_simulation> &sim_points, int run_until) {
   tmc.restart_race();
   tmc.update_from_memory(proc);
 

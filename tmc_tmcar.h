@@ -10,7 +10,7 @@ private:
 public:
   /**
     the dictionaries accept:
-    pos_x, pos_y, pos_z, timer, ckpts
+    pos_x, pos_y, pos_z, timer, ckpts, speed, distl
   **/
   std::unordered_map<std::string, float> values;  /// values for accepted strings
   std::unordered_map<std::string, DWORD> value_addresses;  /// values for addreses of accepted strings
@@ -33,7 +33,8 @@ public:
   /// the mapping for the keys for this car.
   std::unordered_map<std::string, char> key_mapping;
 
-
+  /// total number of checkpoints on map. used to verify if run has ended after finish.
+  int total_no_checkpoints;
 
 
   void init_keymapping ();
@@ -43,6 +44,8 @@ public:
 
   void parse_points_of_interest(std::string filename);
 
+  void parse_other_data (std::string filename);
+
   void update_from_memory (PROCESS_T &proc);
 
   /// returns true if at least one POI has been passed through since last time.
@@ -51,6 +54,8 @@ public:
   double fitness_function ();
 
   void restart_race ();
+
+  void restart_finished_race ();
 
   void tap_key (char ch);
 
