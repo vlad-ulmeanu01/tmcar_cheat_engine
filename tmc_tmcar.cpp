@@ -27,6 +27,9 @@ void TM_CAR::init_keymapping () {
   key_mapping["le"] = 'j';
   key_mapping["ri"] = 'l';
   key_mapping["reset"] = 'q';
+  key_mapping["like"] = 'D';
+  key_mapping["dislike"] = 'N';
+  key_mapping["neutral"] = 'F';
 }
 
 template void TM_CAR::parse_input_file_to_umap(std::string filename, std::unordered_map<std::string, DWORD> &write_to);
@@ -118,7 +121,7 @@ void TM_CAR::parse_other_data (std::string filename) {
 
   std::string line;
 
-  for (int cnt = 0; cnt < 5; cnt++) {
+  for (int cnt = 0; cnt < 7; cnt++) {
     std::getline(fin, line);
     int pos_space = line.find(" ");
     assert(pos_space != -1);
@@ -140,6 +143,12 @@ void TM_CAR::parse_other_data (std::string filename) {
     } else if (cnt == 4) {
       assert(before_space == "bfs_add_time_ms");
       bfs_add_time_ms = atoi(after_space.c_str());
+    } else if (cnt == 5) {
+      assert(before_space == "time_between_diff_steer");
+      time_between_diff_steer = atoi(after_space.c_str());
+    } else if (cnt == 6) {
+      assert(before_space == "game_speed");
+      game_speed = atoi(after_space.c_str());
     }
   }
 
@@ -191,11 +200,9 @@ double TM_CAR::fitness_function () {
     if (poi.has_reached)
       score += poi.score_upon_completion;
 
-  score += 100 * values["ckpts"];
+  score += 300 * values["ckpts"];
   score += values["speed"] / 4;
   score += values["distl"] / 5;
-//  if (values["timer"] > 0)
-//    score += 250000 / (values["timer"] + 1); /// incentivizes earlier runs
 
   if (TM_OTH::rational_cmp<float>(values["ckpts"], total_no_checkpoints))
     score *= 2;
@@ -211,14 +218,18 @@ void TM_CAR::restart_race (PROCESS_T &proc) {
 
   if (!TM_OTH::rational_cmp<float>(values["ckpts"], total_no_checkpoints)) {
     tap_key(key_mapping["reset"]);
-    std::this_thread::sleep_for(std::chrono::milliseconds(100));
+    std::this_thread::sleep_for(std::chrono::milliseconds(100 / game_speed));
   } else {
     while (!TM_OTH::rational_cmp<float>(values["ckpts"], 0)) {
       tap_key('\n');
-      std::this_thread::sleep_for(std::chrono::milliseconds(20));
+      std::this_thread::sleep_for(std::chrono::milliseconds(20 / game_speed));
       update_from_memory(proc);
     }
   }
+}
+
+bool TM_CAR::is_key_pressed (char ch) {
+  return (GetKeyState(ch) & 0x8000);
 }
 
 void TM_CAR::tap_key (char ch) {
@@ -228,7 +239,7 @@ void TM_CAR::tap_key (char ch) {
   input.ki.wScan = MapVirtualKey(LOBYTE(VkKeyScan(ch)), 0);
 
   SendInput(1, &input, sizeof(input));
-  std::this_thread::sleep_for(std::chrono::milliseconds(10));
+  std::this_thread::sleep_for(std::chrono::milliseconds(10 / game_speed));
 
   input.ki.dwFlags = (KEYEVENTF_SCANCODE | KEYEVENTF_KEYUP);
   SendInput(1, &input, sizeof(input));
@@ -262,10 +273,28 @@ void TM_CAR::tap_keys (TM_OTH::point_in_simulation point) {
     }
 
   SendInput(2 * no_of_keys_pressed, input, sizeof(INPUT));
-  std::this_thread::sleep_for(std::chrono::milliseconds(10));
+  std::this_thread::sleep_for(std::chrono::milliseconds(10 / game_speed));
 
   for (cnt = 1; cnt < 2 * no_of_keys_pressed; cnt += 2)
     input[cnt].ki.dwFlags |= KEYEVENTF_KEYUP;
 
   SendInput(2 * no_of_keys_pressed, input, sizeof(INPUT));
+}
+
+void TM_CAR::load_after_crash (std::vector<TM_OTH::point_in_simulation> &sim_points, std::string s) {
+  int cnt = 0;
+  for (char ch: s) {
+    sim_points.push_back(TM_OTH::point_in_simulation());
+    sim_points.back().run_after_this_time = cnt * bfs_window_time_ms;
+    if (ch == 'A') {
+      sim_points.back().is_pressed["up"] = true;
+    } else if (ch == 'B') {
+      sim_points.back().is_pressed["up"] = true;
+      sim_points.back().is_pressed["ri"] = true;
+    } else if (ch == 'C') {
+      sim_points.back().is_pressed["up"] = true;
+      sim_points.back().is_pressed["le"] = true;
+    }
+    cnt++;
+  }
 }

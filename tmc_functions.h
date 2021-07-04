@@ -28,6 +28,8 @@ void checkpoint_reach (TM_CAR &tmc, PROCESS_T &proc);
 
 void test_race_restart_upon_ending (TM_CAR &tmc, PROCESS_T &proc);
 
+void replay_file (TM_CAR &tmc, PROCESS_T &proc, std::string filename);
+
 /**
   sim_points: runs through the provided points.
   run_until: stop the simulation when timer goes over it.

@@ -1,0 +1,7 @@
+total_no_checkpoints 1
+ss_size_cutoff_point 35
+ss_size_cutoff_cut_to 10
+bfs_window_time_ms 150
+bfs_add_time_ms 3500
+time_between_diff_steer 500
+game_speed 1

@@ -45,7 +45,7 @@ namespace TM_OTH
   void store_simulation (std::vector<point_in_simulation> &sim_points) {
     std::ostringstream stringStream;
     stringStream << time(0);
-    std::string filename = "run_" + stringStream.str() + ".txt";
+    std::string filename = "TM_DATA/run_" + stringStream.str() + ".txt";
 
     std::ofstream fout (filename);
 

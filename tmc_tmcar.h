@@ -44,6 +44,10 @@ public:
 
   int bfs_add_time_ms;
 
+  int time_between_diff_steer;
+
+  int game_speed;
+
 
   void init_keymapping ();
 
@@ -63,10 +67,15 @@ public:
 
   void restart_race (PROCESS_T &proc);
 
+  /// ch should be uppercase anyway.
+  bool is_key_pressed (char ch);
+
   void tap_key (char ch);
 
   /// will tap simultaneously any combination of the up/dn/le/ri keys.
   void tap_keys (TM_OTH::point_in_simulation point);
+
+  void load_after_crash (std::vector<TM_OTH::point_in_simulation> &sim_points, std::string s);
 };
 
 #endif

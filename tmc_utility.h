@@ -17,6 +17,7 @@
 #include <sstream>
 #include <set>
 #include <cmath>
+#include <algorithm>
 
 #define DEBUG 0
 

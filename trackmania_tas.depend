@@ -1,12 +1,9 @@
 # depslib dependency file v1.0
-1622896865 source:c:\users\vlad\desktop\probleme\trackmania_tas\main.cpp
-	<windows.h>
-	<iostream>
-	<fstream>
-	<cstring>
-	<cassert>
-	<typeinfo>
-	<unordered_map>
+1625428118 source:c:\users\vlad\desktop\probleme\trackmania_tas\main.cpp
+	"tmc_utility.h"
+	"tmc_process.h"
+	"tmc_tmcar.h"
+	"tmc_functions.h"
 
 1625248057 source:c:\users\mi notebook pro\documents\github\tmcar_cheat_engine\main.cpp
 	"tmc_utility.h"
@@ -58,4 +55,50 @@
 	"tmc_utility.h"
 	"tmc_process.h"
 	"tmc_tmcar.h"
+
+1625320233 c:\users\vlad\desktop\probleme\trackmania_tas\tmc_utility.h
+	<windows.h>
+	<iostream>
+	<fstream>
+	<cstring>
+	<cassert>
+	<typeinfo>
+	<unordered_map>
+	<chrono>
+	<thread>
+	<tuple>
+	<vector>
+	<sstream>
+	<set>
+	<cmath>
+	<algorithm>
+
+1625254475 c:\users\vlad\desktop\probleme\trackmania_tas\tmc_process.h
+	"tmc_utility.h"
+
+1625425795 c:\users\vlad\desktop\probleme\trackmania_tas\tmc_tmcar.h
+	"tmc_utility.h"
+	"tmc_process.h"
+
+1625320242 c:\users\vlad\desktop\probleme\trackmania_tas\tmc_functions.h
+	"tmc_utility.h"
+	"tmc_process.h"
+	"tmc_tmcar.h"
+
+1625254475 source:c:\users\vlad\desktop\probleme\trackmania_tas\tmc_process.cpp
+	"tmc_process.h"
+
+1625428009 source:c:\users\vlad\desktop\probleme\trackmania_tas\tmc_tmcar.cpp
+	"tmc_utility.h"
+	"tmc_process.h"
+	"tmc_tmcar.h"
+
+1625329163 source:c:\users\vlad\desktop\probleme\trackmania_tas\tmc_utility.cpp
+	"tmc_utility.h"
+
+1625426096 source:c:\users\vlad\desktop\probleme\trackmania_tas\tmc_functions.cpp
+	"tmc_utility.h"
+	"tmc_process.h"
+	"tmc_tmcar.h"
+	"tmc_functions.h"
 
